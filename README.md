@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./public/Shannon_Framework.jpg" alt="SHANNON - AI Penetration Testing Framework" width="100%" />
+</p>
+
 # SHANNON Web - AI Penetration Testing Framework
 
 A fully functional web interface for the SHANNON AI penetration testing framework. This application provides an accessible, simplified interface for security teams to conduct authorized security testing without requiring CLI knowledge.
