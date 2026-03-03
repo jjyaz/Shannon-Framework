@@ -1,0 +1,183 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-cyber-black text-gray-100 font-body antialiased;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-heading;
+  }
+
+  ::selection {
+    background: rgba(255, 159, 28, 0.3);
+    color: #FF9F1C;
+  }
+
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: #FF9F1C #060606;
+  }
+
+  *::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: #060606;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: #FF9F1C;
+    border-radius: 0;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: #FFB347;
+  }
+}
+
+@layer components {
+  .terminal-panel {
+    background: linear-gradient(180deg, rgba(10, 10, 10, 0.95) 0%, rgba(6, 6, 6, 0.98) 100%);
+    border: 1px solid rgba(255, 159, 28, 0.15);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .terminal-panel::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 159, 28, 0.6), transparent);
+  }
+
+  .terminal-header {
+    @apply flex items-center gap-2 px-4 py-2 border-b font-mono text-xs uppercase tracking-widest;
+    border-color: rgba(255, 159, 28, 0.1);
+    color: rgba(255, 159, 28, 0.6);
+  }
+
+  .terminal-header::before {
+    content: '>';
+    @apply text-neon-orange;
+  }
+
+  .terminal-body {
+    @apply p-4;
+  }
+
+  .terminal-line {
+    @apply font-mono text-sm leading-relaxed;
+    color: rgba(255, 159, 28, 0.7);
+  }
+
+  .terminal-line::before {
+    content: '$ ';
+    @apply text-neon-orange/50;
+  }
+
+  .terminal-prompt {
+    @apply font-mono text-sm;
+    color: rgba(255, 159, 28, 0.5);
+  }
+
+  .terminal-prompt::after {
+    content: '_';
+    @apply animate-blink text-neon-orange;
+  }
+
+  .scanline-overlay {
+    pointer-events: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    overflow: hidden;
+    opacity: 0.03;
+  }
+
+  .scanline-overlay::before {
+    content: '';
+    position: absolute;
+    width: 100%;
+    height: 2px;
+    background: rgba(255, 159, 28, 1);
+    animation: scanline 8s linear infinite;
+    box-shadow: 0 0 20px rgba(255, 159, 28, 0.5);
+  }
+
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(255, 159, 28, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 159, 28, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .noise-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.015;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  }
+
+  .glow-line {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 159, 28, 0.5), transparent);
+    box-shadow: 0 0 10px rgba(255, 159, 28, 0.3);
+  }
+
+  .glow-line-v {
+    width: 1px;
+    background: linear-gradient(180deg, transparent, rgba(255, 159, 28, 0.5), transparent);
+    box-shadow: 0 0 10px rgba(255, 159, 28, 0.3);
+  }
+}
+
+@layer utilities {
+  .text-shadow-neon {
+    text-shadow: 0 0 10px rgba(255, 159, 28, 0.5), 0 0 30px rgba(255, 159, 28, 0.2);
+  }
+
+  .text-shadow-neon-strong {
+    text-shadow: 0 0 10px rgba(255, 159, 28, 0.7), 0 0 40px rgba(255, 159, 28, 0.4), 0 0 80px rgba(255, 159, 28, 0.2);
+  }
+
+  .text-shadow-red {
+    text-shadow: 0 0 10px rgba(255, 51, 51, 0.5);
+  }
+
+  .text-shadow-green {
+    text-shadow: 0 0 10px rgba(0, 255, 65, 0.5);
+  }
+
+  .glow-border {
+    border: 1px solid rgba(255, 159, 28, 0.2);
+    box-shadow: 0 0 15px rgba(255, 159, 28, 0.1), inset 0 0 15px rgba(255, 159, 28, 0.05);
+  }
+
+  .glow-border-strong {
+    border: 1px solid rgba(255, 159, 28, 0.4);
+    box-shadow: 0 0 30px rgba(255, 159, 28, 0.2), inset 0 0 30px rgba(255, 159, 28, 0.05);
+  }
+
+  .glass-panel {
+    background: rgba(10, 10, 10, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 159, 28, 0.12);
+  }
+}
