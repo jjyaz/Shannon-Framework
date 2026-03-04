@@ -64,18 +64,18 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
   }, []);
 
   const features = [
-    { icon: Brain, title: 'AI Attack Surface', desc: 'Auto-discover AI endpoints, model APIs, and exposed ML infrastructure' },
-    { icon: Target, title: 'Prompt Injection', desc: 'Comprehensive injection patterns for LLM and chatbot systems' },
-    { icon: Bug, title: 'LLM Exploits', desc: 'Detect jailbreaks, data leakage, and model manipulation vectors' },
-    { icon: FileText, title: 'Auto Reports', desc: 'Executive, technical, and DevOps reports generated via AI' },
-    { icon: Scan, title: 'Web Vuln Scan', desc: 'OWASP Top 10, security headers, and misconfiguration detection' },
-    { icon: Network, title: 'RAG Exploit', desc: 'Test retrieval-augmented generation for data poisoning risks' },
+    { icon: Brain, title: 'AI Attack Surface', desc: 'Discover AI endpoints, plugin manifests, vector DBs, and MCP transport exposure' },
+    { icon: Target, title: 'Prompt Injection', desc: 'System prompt extraction, role hijacking, delimiter bypass with OWASP LLM mapping' },
+    { icon: Bug, title: 'LLM Exploits', desc: 'Detect jailbreaks, data leakage, RAG poisoning, and model manipulation vectors' },
+    { icon: FileText, title: 'Auto Reports', desc: 'Executive, technical, and DevOps reports with OWASP LLM Top 10 compliance' },
+    { icon: Scan, title: 'Web + Recon', desc: '9 modules: DNS, OSINT, headers, CSP, sensitive disclosure, and attack path correlation' },
+    { icon: Network, title: 'MCP Security', desc: 'MCP manifest analysis, tool permission auditing, and SSE transport scanning' },
   ];
 
   const bootLines = [
-    { text: '[  OK  ] Initializing SHANNON framework...', color: 'text-terminal-green' },
-    { text: '[  OK  ] Loading attack modules...', color: 'text-terminal-green' },
-    { text: '[  OK  ] Security engine ready', color: 'text-terminal-green' },
+    { text: '[  OK  ] Initializing SHANNON framework v2.0...', color: 'text-terminal-green' },
+    { text: '[  OK  ] Loading 9 attack modules...', color: 'text-terminal-green' },
+    { text: '[  OK  ] OWASP LLM Top 10 mapping active', color: 'text-terminal-green' },
     { text: '[WARN ] Authorized testing mode active', color: 'text-terminal-yellow' },
   ];
 
@@ -122,6 +122,9 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               </NeonText>
               <p className="font-mono text-xs sm:text-sm text-neon-orange/40 uppercase tracking-[0.25em] mb-1.5">
                 AI Penetration Testing Framework
+              </p>
+              <p className="font-mono text-[11px] text-neon-orange/25 mb-1">
+                9 Security Modules | OWASP LLM Top 10 | Attack Path Correlation
               </p>
               <p className="font-mono text-[11px] text-terminal-red/60 uppercase tracking-widest">
                 -Authorized Security Testing Only-
@@ -189,8 +192,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
             {[
               { step: '01', title: 'Authorize', desc: 'Provide legal consent and org details before any scan', icon: Shield },
-              { step: '02', title: 'Configure', desc: 'Select target, scan depth, and testing modules', icon: Zap },
-              { step: '03', title: 'Execute', desc: 'Run real security assessments with live monitoring', icon: Crosshair },
+              { step: '02', title: 'Configure', desc: 'Select target, depth, modules, or use preset templates', icon: Zap },
+              { step: '03', title: 'Execute', desc: '9 modules run with live progress, attack paths, and auto reports', icon: Crosshair },
             ].map((item, i) => {
               const Icon = item.icon;
               return (

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { CheckCircle, XCircle, Loader, Plus, Search, Clock, ChevronRight } from 'lucide-react';
+import { CheckCircle, XCircle, Loader, Plus, Search, Clock, ChevronRight, TrendingUp, TrendingDown, Minus, BarChart3 } from 'lucide-react';
 import { GlowButton, Badge, LoadingSpinner, Input } from '../ui';
 import { supabase } from '../../lib/supabase';
 import type { Scan } from '../../types';
@@ -8,8 +8,13 @@ interface DashboardPageProps {
   onNavigate: (page: string, scanId?: string) => void;
 }
 
+interface ScanWithFindings extends Scan {
+  findingCount?: number;
+  criticalCount?: number;
+}
+
 export function DashboardPage({ onNavigate }: DashboardPageProps) {
-  const [scans, setScans] = useState<Scan[]>([]);
+  const [scans, setScans] = useState<ScanWithFindings[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -30,7 +35,31 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setScans(data || []);
+
+      const scansWithFindings: ScanWithFindings[] = data || [];
+
+      if (scansWithFindings.length > 0) {
+        const scanIds = scansWithFindings.map(s => s.id);
+        const { data: findingsData } = await supabase
+          .from('findings')
+          .select('scan_id, severity')
+          .in('scan_id', scanIds);
+
+        if (findingsData) {
+          const countMap: Record<string, { total: number; critical: number }> = {};
+          findingsData.forEach(f => {
+            if (!countMap[f.scan_id]) countMap[f.scan_id] = { total: 0, critical: 0 };
+            countMap[f.scan_id].total++;
+            if (f.severity === 'critical') countMap[f.scan_id].critical++;
+          });
+          scansWithFindings.forEach(s => {
+            s.findingCount = countMap[s.id]?.total || 0;
+            s.criticalCount = countMap[s.id]?.critical || 0;
+          });
+        }
+      }
+
+      setScans(scansWithFindings);
     } catch (err) {
       console.error('Error loading scans:', err);
     } finally {
@@ -82,6 +111,30 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
     failed: scans.filter(s => s.status === 'failed').length,
   };
 
+  const completedScans = scans.filter(s => s.status === 'completed');
+  const avgRisk = completedScans.length > 0
+    ? Math.round(completedScans.reduce((sum, s) => sum + s.risk_score, 0) / completedScans.length)
+    : 0;
+
+  const domainGroups: Record<string, ScanWithFindings[]> = {};
+  completedScans.forEach(s => {
+    if (!domainGroups[s.target_domain]) domainGroups[s.target_domain] = [];
+    domainGroups[s.target_domain].push(s);
+  });
+
+  const trends = Object.entries(domainGroups)
+    .filter(([, group]) => group.length >= 2)
+    .map(([domain, group]) => {
+      const sorted = [...group].sort((a, b) =>
+        new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      );
+      const latest = sorted[0];
+      const previous = sorted[1];
+      const delta = latest.risk_score - previous.risk_score;
+      return { domain, latest, previous, delta };
+    })
+    .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+
   return (
     <div className="min-h-screen pt-16 pb-12 px-4 sm:px-6 lg:px-8 grid-bg">
       <div className="scanline-overlay" />
@@ -102,12 +155,13 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
           </GlowButton>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
           {[
             { label: 'Total', value: stats.total, color: 'text-neon-orange' },
             { label: 'Complete', value: stats.completed, color: 'text-terminal-green' },
             { label: 'Running', value: stats.running, color: 'text-terminal-yellow' },
             { label: 'Failed', value: stats.failed, color: 'text-terminal-red' },
+            { label: 'Avg Risk', value: avgRisk, color: avgRisk >= 60 ? 'text-terminal-red' : avgRisk >= 40 ? 'text-neon-orange' : 'text-terminal-green' },
           ].map((stat) => (
             <div key={stat.label} className="terminal-panel rounded-sm">
               <div className="px-3 py-2 border-b border-neon-orange/5">
@@ -119,6 +173,53 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             </div>
           ))}
         </div>
+
+        {trends.length > 0 && (
+          <div className="terminal-panel rounded-sm mb-6">
+            <div className="terminal-header">
+              <BarChart3 className="w-3 h-3" />
+              Risk Trends
+              <span className="ml-auto text-neon-orange/30 font-normal">domains with multiple scans</span>
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                {trends.slice(0, 6).map((trend) => (
+                  <button
+                    key={trend.domain}
+                    onClick={() => onNavigate('scan-result', trend.latest.id)}
+                    className="p-3 border border-neon-orange/10 text-left hover:border-neon-orange/25 transition-all"
+                  >
+                    <div className="font-mono text-xs text-neon-orange font-semibold truncate mb-1">
+                      {trend.domain}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-lg font-bold text-neon-orange">{trend.latest.risk_score}</span>
+                        <span className="font-mono text-[10px] text-neon-orange/20">from {trend.previous.risk_score}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {trend.delta > 0 ? (
+                          <TrendingUp className="w-3 h-3 text-terminal-red" />
+                        ) : trend.delta < 0 ? (
+                          <TrendingDown className="w-3 h-3 text-terminal-green" />
+                        ) : (
+                          <Minus className="w-3 h-3 text-neon-orange/30" />
+                        )}
+                        <span className={`font-mono text-xs font-bold ${
+                          trend.delta > 0 ? 'text-terminal-red' :
+                          trend.delta < 0 ? 'text-terminal-green' :
+                          'text-neon-orange/30'
+                        }`}>
+                          {trend.delta > 0 ? '+' : ''}{trend.delta}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="terminal-panel rounded-sm mb-4">
           <div className="p-3 flex flex-col md:flex-row gap-3">
@@ -174,9 +275,9 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
             {filteredScans.map((scan) => (
               <div
                 key={scan.id}
-                onClick={() => scan.status === 'completed' && onNavigate('scan-result', scan.id)}
+                onClick={() => (scan.status === 'completed' || scan.status === 'running') && onNavigate('scan-result', scan.id)}
                 className={`terminal-panel rounded-sm transition-all duration-200 ${
-                  scan.status === 'completed' ? 'cursor-pointer hover:border-neon-orange/30' : ''
+                  scan.status === 'completed' || scan.status === 'running' ? 'cursor-pointer hover:border-neon-orange/30' : ''
                 }`}
               >
                 <div className="p-3 flex items-center justify-between gap-4">
@@ -193,6 +294,15 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
                       </div>
                       <div className="flex items-center gap-3 font-mono text-[11px] text-neon-orange/20 mt-0.5">
                         <span>depth:{scan.scan_depth}</span>
+                        {scan.findingCount !== undefined && scan.status === 'completed' && (
+                          <>
+                            <span>|</span>
+                            <span>{scan.findingCount} finding{scan.findingCount !== 1 ? 's' : ''}</span>
+                            {(scan.criticalCount || 0) > 0 && (
+                              <span className="text-terminal-red/50">{scan.criticalCount} critical</span>
+                            )}
+                          </>
+                        )}
                         <span>|</span>
                         <span>{new Date(scan.created_at).toLocaleDateString()} {new Date(scan.created_at).toLocaleTimeString()}</span>
                       </div>
@@ -214,7 +324,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
                         </Badge>
                       </div>
                     )}
-                    {scan.status === 'completed' && (
+                    {(scan.status === 'completed' || scan.status === 'running') && (
                       <ChevronRight className="w-3.5 h-3.5 text-neon-orange/20" />
                     )}
                   </div>

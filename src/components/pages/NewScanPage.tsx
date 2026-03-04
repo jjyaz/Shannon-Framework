@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Play, ArrowLeft } from 'lucide-react';
+import { Play, ArrowLeft, Zap } from 'lucide-react';
 import { GlowButton, Input, TextArea, Select, Checkbox, LoadingSpinner } from '../ui';
 import { ConsentModal } from '../modals/ConsentModal';
 import type { ConsentData } from '../modals/ConsentModal';
@@ -10,30 +10,61 @@ interface NewScanPageProps {
   onNavigate: (page: string, scanId?: string) => void;
 }
 
-const AVAILABLE_MODULES: ScanModule[] = [
-  { name: 'recon', label: 'Reconnaissance', description: 'DNS analysis, subdomain discovery', enabled: true },
-  { name: 'osint', label: 'OSINT', description: 'Open-source intelligence gathering', enabled: true },
-  { name: 'web_vuln', label: 'Web Vuln Scan', description: 'OWASP Top 10, header analysis', enabled: true },
-  { name: 'llm_injection', label: 'LLM Injection', description: 'Prompt injection, jailbreak attempts', enabled: true },
-  { name: 'ai_attack_surface', label: 'AI Attack Surface', description: 'AI/ML endpoint exposure', enabled: true },
-  { name: 'prompt_injection', label: 'Prompt Injection Audit', description: 'Advanced injection patterns', enabled: true },
-  { name: 'rag_exploitation', label: 'RAG Exploitation', description: 'RAG system data poisoning', enabled: false },
+const AVAILABLE_MODULES: (ScanModule & { category: string })[] = [
+  { name: 'recon', label: 'Reconnaissance', description: 'DNS enumeration, subdomain discovery, SPF/DMARC', enabled: true, category: 'recon' },
+  { name: 'osint', label: 'OSINT', description: 'Robots.txt, sitemap, tech fingerprinting, email harvest', enabled: true, category: 'recon' },
+  { name: 'web_vuln', label: 'Web Vuln Scan', description: 'Security headers, CSP, sensitive paths', enabled: true, category: 'web' },
+  { name: 'sensitive_disclosure', label: 'Sensitive Disclosure', description: 'API key exposure, PII detection, error leaks', enabled: true, category: 'web' },
+  { name: 'llm_injection', label: 'LLM Injection', description: 'AI endpoint discovery across 16 paths', enabled: true, category: 'ai' },
+  { name: 'ai_attack_surface', label: 'AI Attack Surface', description: 'Plugin manifests, vector DBs, model APIs', enabled: true, category: 'ai' },
+  { name: 'prompt_injection', label: 'Prompt Injection', description: 'System prompt extraction, role hijacking', enabled: true, category: 'ai' },
+  { name: 'rag_exploitation', label: 'RAG Exploitation', description: 'Document upload, retrieval poisoning', enabled: false, category: 'ai' },
+  { name: 'mcp_security', label: 'MCP Security', description: 'MCP manifest, tool permissions, SSE transport', enabled: false, category: 'ai' },
 ];
+
+interface ScanPreset {
+  name: string;
+  description: string;
+  modules: string[];
+}
+
+const SCAN_PRESETS: ScanPreset[] = [
+  { name: 'Full Assessment', description: 'All 9 modules', modules: AVAILABLE_MODULES.map(m => m.name) },
+  { name: 'AI Security Audit', description: 'AI/LLM focused', modules: ['llm_injection', 'ai_attack_surface', 'prompt_injection', 'rag_exploitation', 'mcp_security', 'sensitive_disclosure'] },
+  { name: 'Web Hardening', description: 'Web security', modules: ['recon', 'osint', 'web_vuln', 'sensitive_disclosure'] },
+  { name: 'Quick Recon', description: 'Fast surface scan', modules: ['recon', 'osint'] },
+];
+
+const CATEGORY_LABELS: Record<string, string> = {
+  recon: 'Reconnaissance',
+  web: 'Web Security',
+  ai: 'AI / LLM Security',
+};
 
 export function NewScanPage({ onNavigate }: NewScanPageProps) {
   const [targetDomain, setTargetDomain] = useState('');
   const [targetIp, setTargetIp] = useState('');
   const [scopeDescription, setScopeDescription] = useState('');
   const [scanDepth, setScanDepth] = useState<ScanDepth>('standard');
-  const [modules, setModules] = useState<ScanModule[]>(AVAILABLE_MODULES);
+  const [modules, setModules] = useState<(ScanModule & { category: string })[]>(AVAILABLE_MODULES);
   const [showConsentModal, setShowConsentModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [activePreset, setActivePreset] = useState<string | null>(null);
 
   const handleModuleToggle = (moduleName: string) => {
+    setActivePreset(null);
     setModules(modules.map(m =>
       m.name === moduleName ? { ...m, enabled: !m.enabled } : m
     ));
+  };
+
+  const handlePreset = (preset: ScanPreset) => {
+    setActivePreset(preset.name);
+    setModules(modules.map(m => ({
+      ...m,
+      enabled: preset.modules.includes(m.name),
+    })));
   };
 
   const handleStartScan = () => {
@@ -123,6 +154,7 @@ export function NewScanPage({ onNavigate }: NewScanPageProps) {
   };
 
   const selectedCount = modules.filter(m => m.enabled).length;
+  const categories = ['recon', 'web', 'ai'];
 
   return (
     <div className="min-h-screen pt-16 pb-12 px-4 sm:px-6 lg:px-8 grid-bg">
@@ -188,32 +220,71 @@ export function NewScanPage({ onNavigate }: NewScanPageProps) {
 
           <div className="terminal-panel rounded-sm">
             <div className="terminal-header">
+              <Zap className="w-3 h-3" />
+              Scan Presets
+            </div>
+            <div className="p-4">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                {SCAN_PRESETS.map((preset) => (
+                  <button
+                    key={preset.name}
+                    onClick={() => handlePreset(preset)}
+                    className={`p-2 border text-left transition-all ${
+                      activePreset === preset.name
+                        ? 'border-neon-orange/30 bg-neon-orange/10'
+                        : 'border-neon-orange/10 hover:border-neon-orange/20'
+                    }`}
+                  >
+                    <span className={`font-mono text-[11px] font-bold block ${
+                      activePreset === preset.name ? 'text-neon-orange' : 'text-neon-orange/50'
+                    }`}>
+                      {preset.name}
+                    </span>
+                    <span className="font-mono text-[10px] text-neon-orange/20">{preset.description}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="terminal-panel rounded-sm">
+            <div className="terminal-header">
               Security Modules
               <span className="ml-auto text-neon-orange/30 font-normal">{selectedCount}/{modules.length} active</span>
             </div>
-            <div className="p-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {modules.map((module) => (
-                  <div
-                    key={module.name}
-                    className={`p-3 border transition-all cursor-pointer ${
-                      module.enabled
-                        ? 'border-neon-orange/25 bg-neon-orange/[0.03]'
-                        : 'border-neon-orange/5 bg-transparent'
-                    }`}
-                    onClick={() => handleModuleToggle(module.name)}
-                  >
-                    <Checkbox
-                      label={module.label}
-                      checked={module.enabled}
-                      onChange={() => handleModuleToggle(module.name)}
-                    />
-                    <p className="font-mono text-[11px] text-neon-orange/20 ml-7 mt-0.5">
-                      {module.description}
-                    </p>
+            <div className="p-4 space-y-4">
+              {categories.map((cat) => {
+                const catModules = modules.filter(m => m.category === cat);
+                return (
+                  <div key={cat}>
+                    <h3 className="font-mono text-[10px] text-neon-orange/30 uppercase tracking-widest mb-2">
+                      {CATEGORY_LABELS[cat]}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {catModules.map((module) => (
+                        <div
+                          key={module.name}
+                          className={`p-3 border transition-all cursor-pointer ${
+                            module.enabled
+                              ? 'border-neon-orange/25 bg-neon-orange/[0.03]'
+                              : 'border-neon-orange/5 bg-transparent'
+                          }`}
+                          onClick={() => handleModuleToggle(module.name)}
+                        >
+                          <Checkbox
+                            label={module.label}
+                            checked={module.enabled}
+                            onChange={() => handleModuleToggle(module.name)}
+                          />
+                          <p className="font-mono text-[11px] text-neon-orange/20 ml-7 mt-0.5">
+                            {module.description}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
           </div>
 
